@@ -1,4 +1,8 @@
 <x-app-layout>
+    @php
+        $carts = session('cart', []);
+    @endphp
+
     <x-slot name="header">
         <h2 class="font-semibold text-xl text-gray-800 leading-tight">
             {{ __('Daftar Buku') }}
@@ -133,18 +137,41 @@
                         <div class="grid grid-cols-2 gap-2 mt-2">
 
                             <!-- Keranjang -->
-                            <form action="{{ url('/cart/add', $book->id) }}" method="POST" class="w-full">
-                                @csrf
-                                <button type="submit"
-                                    class="w-full flex items-center justify-center gap-2
-           bg-emerald-500 hover:bg-emerald-600 
-           text-white text-xs font-medium 
-           py-2 px-2 rounded-lg transition shadow-sm">
+                            @php
+                                $isInCart = isset($carts[$book->id]);
+                                $isFull = count($carts) >= 3;
+                            @endphp
 
-                                    <x-heroicon-o-shopping-cart class="w-5 h-5 text-white shrink-0" />
-                                    <span class="truncate">Keranjang</span>
+                            @if ($isInCart)
+                                <button disabled
+                                    class="w-full flex items-center justify-center gap-2
+        bg-gray-400 text-white text-xs font-medium 
+        py-2 px-2 rounded-lg cursor-not-allowed">
+
+                                    ✔ Sudah di Cart
                                 </button>
-                            </form>
+                            @elseif($isFull)
+                                <button disabled
+                                    class="w-full flex items-center justify-center gap-2
+        bg-gray-300 text-gray-600 text-xs font-medium 
+        py-2 px-2 rounded-lg cursor-not-allowed">
+
+                                    Cart Penuh
+                                </button>
+                            @else
+                                <form action="{{ url('/cart/add', $book->id) }}" method="POST" class="w-full">
+                                    @csrf
+                                    <button type="submit"
+                                        class="w-full flex items-center justify-center gap-2
+            bg-emerald-500 hover:bg-emerald-600 
+            text-white text-xs font-medium 
+            py-2 px-2 rounded-lg transition shadow-sm">
+
+                                        <x-heroicon-o-shopping-cart class="w-5 h-5 text-white shrink-0" />
+                                        <span class="truncate">Keranjang</span>
+                                    </button>
+                                </form>
+                            @endif
 
                             <!-- Detail -->
                             <a href="{{ route('book.detail', $book->id) }}"

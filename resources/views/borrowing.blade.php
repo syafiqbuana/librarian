@@ -17,6 +17,8 @@
 
             <div class="bg-white shadow rounded-lg p-4 mb-4">
 
+                <img src="{{ asset('storage/' . $borrowing->cover_image) }}" alt="">
+
                 {{-- header --}}
                 <div class="flex justify-between items-center mb-2">
                     <div>
@@ -29,22 +31,24 @@
                     </div>
 
                     {{-- status --}}
-                    <div>
+                    <div class="flex flex-row gap-2">
                         @if ($borrowing->isOverdue())
                             <span class="bg-red-100 text-red-600 yellow-red-600 px-3 py-1 rounded-full text-xs">
                                 Belum Dikembalikan
                             </span>
+                            <span class="bg-red-100 text-red-600 yellow-red-600 px-3 py-1 rounded-full text-xs">Denda: Rp {{ number_format($borrowing->fine, 0, ',', '.') }}</span>
                         @elseif($borrowing->isReturnedLate())
                             <span class="bg-red-100 text-red-600 px-3 py-1 rounded-full text-xs">
                                 Terlambat Dikembalikan
                             </span>
+                            <span class="bg-red-100 text-red-600 yellow-red-600 px-3 py-1 rounded-full text-xs">Denda: Rp {{ number_format($borrowing->fine, 0, ',', '.') }}</span>
                         @elseif($borrowing->isReturned())
                             <span class="bg-green-100 text-green-600 px-3 py-1 rounded-full text-xs">
-                                Sudah Dikembalikan
+                                Dikembalikan
                             </span>
                         @else
                             <span class="bg-blue-100 text-blue-600 px-3 py-1 rounded-full text-xs">
-                                Sedang Dipinjam
+                                Dipinjam
                             </span>
                         @endif
                     </div>
@@ -66,21 +70,22 @@
                                     <span class="text-sm text-gray-500">
                                         Menunggu Konfirmasi Pengembalian
                                     </span>
-                                @elseif ($borrowing->isReturned())
+                                @elseif ($borrowing->isReturned() || $borrowing->isReturnedLate())
                                     <span class="text-sm text-gray-500">
-                                        Sudah Dikembalikan
+                                        Dikembalikan Pada : {{ $borrowing->return_date->format('d M Y') }}
                                     </span>
                                 @else
-                                    <form action="{{ route('borrowing.return', $borrowing->id ) }}" method="POST">
+                                    <form action="{{ route('borrowing.return', $borrowing->id) }}" method="POST">
                                         @csrf
-                                        @if ($borrowing->isReturnedLate()|| $borrowing->isReturned())
-                                             <span class="">Dikembalikan Pada: {{ $borrowing->return_date->format('d M Y') }}</span>
+                                        @if ($borrowing->isReturnedLate() || $borrowing->isReturned())
+                                            <span class="">Dikembalikan Pada:
+                                                {{ $borrowing->return_date->format('d M Y') }}</span>
                                         @else
-                                        <button type="submit" class="bg-green-500 text-white px-3 py-1 rounded-md text-md">
-                                            Kembalikan
-                                        </button>
+                                            <button type="submit"
+                                                class="bg-green-500 text-white px-3 py-1 rounded-md text-md">
+                                                Kembalikan
+                                            </button>
                                         @endif
-                                       
                                     </form>
                                 @endif
 

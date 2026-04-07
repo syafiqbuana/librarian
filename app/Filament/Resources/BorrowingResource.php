@@ -62,6 +62,10 @@ class BorrowingResource extends Resource
                     ->color(fn($state) => $state === null ? 'danger' : 'success')
                     ->badge() 
                     ->placeholder('Belum dikembalikan'),
+                TextColumn::make('fine')
+                    ->label('Denda')
+                    ->money('idr')
+                    ->color(fn($state) => $state === null ? 'danger' : 'success')
             ])
             ->filters([
                 //

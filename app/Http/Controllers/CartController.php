@@ -33,21 +33,21 @@ class CartController extends Controller
 
         $cart = session()->get('cart', []);
 
-        if (isset($cart[$id])) {
-
-            if ($cart[$id]['quantity'] >= $book->stock) {
-                return back()->with('error', 'Stok tidak mencukupi');
-            }
-
-            $cart[$id]['quantity']++;
-
-        } else {
-
-            $cart[$id] = [
-                'title' => $book->title,
-                'quantity' => 1,
-            ];
+        // 🔥 Batasi maksimal 3 buku berbeda
+        if (count($cart) >= 3 && !isset($cart[$id])) {
+            return back()->with('error', 'Maksimal 3 buku dalam satu peminjaman');
         }
+
+        // 🔥 Kalau buku sudah ada, tidak perlu tambah lagi
+        if (isset($cart[$id])) {
+            return back()->with('error', 'Buku sudah ada di cart');
+        }
+
+        // 🔥 Selalu quantity = 1
+        $cart[$id] = [
+            'title' => $book->title,
+            'quantity' => 1,
+        ];
 
         session()->put('cart', $cart);
 
