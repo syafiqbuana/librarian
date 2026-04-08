@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\{Borrowing, BorrowingDetail, Book};
 use Illuminate\Support\Facades\DB;
+use Carbon\Carbon;
 
 class BorrowingController extends Controller
 {
@@ -29,6 +30,9 @@ class BorrowingController extends Controller
 
                 $borrowing = Borrowing::create([
                     'user_id' => auth()->id(),
+                    'name' => auth()->user()->name,
+                    'borrow_date' => Carbon::now(),
+                    'due_date' => Carbon::now()->addDays(14)
                 ]);
 
                 foreach ($cart as $bookId => $item) {

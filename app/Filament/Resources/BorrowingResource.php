@@ -6,6 +6,7 @@ use App\Filament\Resources\BorrowingResource\Pages;
 use App\Filament\Resources\BorrowingResource\RelationManagers;
 use App\Models\Borrowing;
 use Filament\Forms;
+use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
@@ -22,6 +23,9 @@ use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Section;
 use Filament\Forms\Components\Grid;
+use Carbon\Carbon;
+use Filament\Forms\Components\Repeater;
+use Filament\Forms\Components\Hidden;
 class BorrowingResource extends Resource
 {
     protected static ?string $model = Borrowing::class;
@@ -36,21 +40,84 @@ class BorrowingResource extends Resource
                     Grid::make(2)->schema([
 
                         Select::make('user_id')
-                            ->label('Peminjam')
-                            ->options(User::where(isStudent: true)->pluck('name', 'id'))
+                            ->label('Akun Peminjam')
+                            ->options(User::where('role', 'student')->pluck('name', 'id'))
                             ->searchable()
+                            ->live()
                             ->placeholder('Pilih peminjam')
-                            ->required()
+                            ->afterStateUpdated(function ($state, callable $set, callable $get) {
+                                if ($state) {
+                                    // Jika user dipilih, isi name otomatis dari data user
+                                    $user = \App\Models\User::find($state);
+                                    $set('name', $user?->name);
+                                } else {
+                                    // Jika user dikosongkan, kosongkan name biar admin isi manual
+                                    $set('name', null);
+                                }
+                            })
+
                             ->helperText('Pilih peminjam dari daftar pengguna yang terdaftar'),
 
                         TextInput::make('name')
                             ->label('Nama Peminjam')
                             ->required()
+                            ->disabled(fn(callable $get) => filled($get('user_id')))
+                            // disabled jika user_id sudah dipilih, aktif jika kosong
+                            ->dehydrated(true) // pastikan tetap tersimpan walau disabled
                             ->placeholder('Masukkan nama peminjam')
                             ->helperText('Masukkan nama peminjam secara manual jika tidak ditemukan dalam daftar pengguna'),
+                        DatePicker::make('borrow_date')
+                            ->label('Tanggal Pinjam')
+                            ->required()
+                            ->live()
+                            ->afterStateUpdated(function ($state, callable $set) {
+                                if ($state) {
+                                    $set('due_date', Carbon::parse($state)->addDays(14)->format('Y-m-d'));
+                                }
+                            })
+                            ->helperText('Pilih tanggal peminjaman'),
+                        DatePicker::make('due_date')
+                            ->label('Tanggal Jatuh Tempo')
+                            ->required()
+                            ->helperText('atuh tempo 14 hari setelah tanggal pinjam'),
+
                     ]),
                 ]),
+                Section::make('Detail Peminjaman')
+                    ->schema([
+
+                        Repeater::make('borrowingDetail')
+                            ->label('Buku yang Dipinjam')
+                            ->relationship()
+                            ->schema([
+                                Select::make('book_id')
+                                    ->label('Buku')
+                                    ->options(\App\Models\Book::pluck('title', 'id'))
+                                    ->searchable()
+                                    ->placeholder('Pilih buku yang dipinjam')
+                                    ->required()
+                                    ->helperText('Pilih buku yang dipinjam dari daftar buku yang tersedia')
+                                    ->live()
+                                    ->afterStateUpdated(fn($state, $set) => [
+                                        $set('stock', \App\Models\Book::find($state)?->stock ?? 0),
+                                        $set('quantity', 1)
+                                    ]),
+                                TextInput::make('stock')
+                                    ->label('Stok Tersedia')
+                                    ->disabled()
+                                    ->dehydrated()
+                                    ->helperText('Stok buku saat ini, akan diperbarui secara otomatis berdasarkan pilihan buku'),
+                                TextInput::make('quantity')
+                                    ->label('QTY')
+                                    ->disabled()
+                                    ->dehydrated(),
+                            ])
+                            ->addActionLabel('Tambah Buku')
+                            ->rules(['distinct']),
+
+                    ])
             ]);
+
     }
 
     public static function table(Table $table): Table

@@ -12,6 +12,7 @@ class Borrowing extends Model
         'user_id',
         'borrow_date',
         'due_date',
+        'name',
         'return_date',
         'status',
     ];
@@ -25,10 +26,7 @@ class Borrowing extends Model
     protected static function booted()
     {
         static::creating(function ($borrowing) {
-            $borrowing->name = auth()->user();
             $borrowing->status = 'waiting';
-            $borrowing->borrow_date = Carbon::now();
-            $borrowing->due_date = Carbon::now()->addDays(14);
         });
     }
 
