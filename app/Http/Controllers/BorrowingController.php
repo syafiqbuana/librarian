@@ -27,7 +27,9 @@ class BorrowingController extends Controller
         try {
             DB::transaction(function () use ($cart) {
 
-                $borrowing = Borrowing::create();
+                $borrowing = Borrowing::create([
+                    'user_id' => auth()->id(),
+                ]);
 
                 foreach ($cart as $bookId => $item) {
 

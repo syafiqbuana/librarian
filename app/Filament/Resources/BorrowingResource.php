@@ -17,6 +17,11 @@ use Illuminate\Database\Eloquent\SoftDeletingScope;
 use Filament\Tables\Actions\Action;
 use Illuminate\Support\Facades\DB;
 use Filament\Notifications\Notification;
+use App\Models\User;
+use Filament\Forms\Components\TextInput;
+use Filament\Forms\Components\Select;
+use Filament\Forms\Components\Section;
+use Filament\Forms\Components\Grid;
 class BorrowingResource extends Resource
 {
     protected static ?string $model = Borrowing::class;
@@ -27,7 +32,24 @@ class BorrowingResource extends Resource
     {
         return $form
             ->schema([
-                //
+                Section::make('Informasi Peminjam')->schema([
+                    Grid::make(2)->schema([
+
+                        Select::make('user_id')
+                            ->label('Peminjam')
+                            ->options(User::where(isStudent: true)->pluck('name', 'id'))
+                            ->searchable()
+                            ->placeholder('Pilih peminjam')
+                            ->required()
+                            ->helperText('Pilih peminjam dari daftar pengguna yang terdaftar'),
+
+                        TextInput::make('name')
+                            ->label('Nama Peminjam')
+                            ->required()
+                            ->placeholder('Masukkan nama peminjam')
+                            ->helperText('Masukkan nama peminjam secara manual jika tidak ditemukan dalam daftar pengguna'),
+                    ]),
+                ]),
             ]);
     }
 
@@ -39,7 +61,7 @@ class BorrowingResource extends Resource
                 TextColumn::make('borrow_date')->date()->label('Tanggal Pinjam')->sortable(),
                 TextColumn::make('due_date')->date()->label('Tanggal Jatuh Tempo')->sortable(),
                 TextColumn::make('status')->label('Status')->badge()->color(
-                    fn($state)=> match ($state){
+                    fn($state) => match ($state) {
                         'borrowed' => 'primary',
                         'waiting' => 'info',
                         'returned_late' => 'danger',
@@ -47,20 +69,20 @@ class BorrowingResource extends Resource
                         'returned' => 'success'
                     }
                 )->formatStateUsing(
-                    fn($state) => match ($state){
-                        'borrowed' => 'Dipinjam',
-                        'returned_late' => 'Dikembalikan Terlambat',
-                        'pending_return' => 'Menunggu Konfirmasi',
-                        'waiting' => 'Menunggu Dikonformasi',
-                        'returned' => 'Dikembalikan',
-                        default => $state
-                    }
-                ),
+                        fn($state) => match ($state) {
+                            'borrowed' => 'Dipinjam',
+                            'returned_late' => 'Dikembalikan Terlambat',
+                            'pending_return' => 'Menunggu Konfirmasi',
+                            'waiting' => 'Menunggu Dikonformasi',
+                            'returned' => 'Dikembalikan',
+                            default => $state
+                        }
+                    ),
                 TextColumn::make('return_date')
                     ->label('Tanggal Dikembalikan')
                     ->date()
                     ->color(fn($state) => $state === null ? 'danger' : 'success')
-                    ->badge() 
+                    ->badge()
                     ->placeholder('Belum dikembalikan'),
                 TextColumn::make('fine')
                     ->label('Denda')
@@ -79,24 +101,24 @@ class BorrowingResource extends Resource
                     ->label('Konfirmasi Pengembalian')
                     ->color('success')
                     ->requiresConfirmation()
-                    ->visible(fn($record)=> $record->isPendingReturn())
-                    ->action(function ($record){
+                    ->visible(fn($record) => $record->isPendingReturn())
+                    ->action(function ($record) {
 
-                        DB::transaction(function () use ($record){
+                        DB::transaction(function () use ($record) {
                             $record->update([
-                                'return_date' =>now(),
+                                'return_date' => now(),
                                 'status' => $record->isOverdue() ? 'returned_late' : 'returned'
                             ]);
 
-                            foreach($record->borrowingDetail as $detail){
+                            foreach ($record->borrowingDetail as $detail) {
                                 $detail->book->increment('stock', $detail->quantity);
                             }
 
                             Notification::make()
-                            ->title('Pengembalian Dikonfirmasi')
-                            ->success()
-                            ->color('info')
-                            ->send();
+                                ->title('Pengembalian Dikonfirmasi')
+                                ->success()
+                                ->color('info')
+                                ->send();
                         });
                     })
             ])
