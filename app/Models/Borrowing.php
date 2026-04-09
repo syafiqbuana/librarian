@@ -22,15 +22,15 @@ class Borrowing extends Model
         'return_date' => 'datetime',
     ];
 
-    protected static function booted()
-    {
-        static::creating(function ($borrowing) {
-            $borrowing->name = auth()->user();
-            $borrowing->status = 'waiting';
-            $borrowing->borrow_date = Carbon::now();
-            $borrowing->due_date = Carbon::now()->addDays(14);
-        });
-    }
+    // protected static function booted()
+    // {
+    //     static::creating(function ($borrowing) {
+    //         $borrowing->name = auth()->user();
+    //         $borrowing->status = 'waiting';
+    //         $borrowing->borrow_date = Carbon::now();
+    //         $borrowing->due_date = Carbon::now()->addDays(14);
+    //     });
+    // }
 
     // kondisi aktif (real-time)
     public function isOverdue()
@@ -83,6 +83,11 @@ public function getFineAttribute()
     public function borrowingDetail()
     {
         return $this->hasMany(BorrowingDetail::class);
+    }
+
+    public function visitor()
+    {
+        return $this->belongsTo(Visitor::class);
     }
 
 }

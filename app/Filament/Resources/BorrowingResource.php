@@ -4,6 +4,7 @@ namespace App\Filament\Resources;
 
 use App\Filament\Resources\BorrowingResource\Pages;
 use App\Filament\Resources\BorrowingResource\RelationManagers;
+use App\Models\Visitor;
 use App\Models\Borrowing;
 use Filament\Forms;
 use Filament\Forms\Form;
@@ -12,6 +13,11 @@ use Filament\Tables;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 use GrahamCampbell\ResultType\Success;
+use Carbon\Carbon;
+use App\Models\Book;
+use Filament\Actions\ViewAction;
+use Filament\Forms\Components\DatePicker;
+use Filament\Forms\Components\Repeater;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
 use Filament\Tables\Actions\Action;
@@ -37,18 +43,62 @@ class BorrowingResource extends Resource
 
                         Select::make('user_id')
                             ->label('Peminjam')
-                            ->options(User::where(isStudent: true)->pluck('name', 'id'))
+                            ->options(User::where('role', 'student')->pluck('name', 'id'))
                             ->searchable()
                             ->placeholder('Pilih peminjam')
                             ->required()
+                            ->live()
+                            ->disabled(fn($get) => filled($get('visitor_id')))
                             ->helperText('Pilih peminjam dari daftar pengguna yang terdaftar'),
 
-                        TextInput::make('name')
-                            ->label('Nama Peminjam')
+                        Select::make('visitor_id')
+                            ->label('Pengunjung')
+                            ->disabled(fn($get) => filled($get('user_id')))
+                            ->relationship('visitor', 'name')
+                            ->options(Visitor::pluck('name', 'id'))
+                            ->searchable()
+                            ->live()
+                            ->placeholder('Pilih pengunjung')
+                            ->createOptionForm([
+                                TextInput::make('name')->required()->maxLength(255),
+                                TextInput::make('email')->email()->required()->maxLength(255),
+                                TextInput::make('phone_number')->tel()->required()->maxLength(20),
+                            ]),
+                        DatePicker::make('borrow_date')
+                            ->label('Tanggal Pinjam')
                             ->required()
-                            ->placeholder('Masukkan nama peminjam')
-                            ->helperText('Masukkan nama peminjam secara manual jika tidak ditemukan dalam daftar pengguna'),
+                            ->live()
+                            ->afterStateUpdated(function ($state, callable $set) {
+                                if ($state) {
+                                    $set('due_date', Carbon::parse($state)->addDays(14)->format('Y-m-d'));
+                                }
+                            }),
+                        DatePicker::make('due_date')
+                            ->label('Tanggal Jatuh Tempo')
+                            ->required()
                     ]),
+                    Section::make('Buku Yang Dipinjam')
+                        ->schema([
+                            Repeater::make('book_list')
+                                ->label('List Buku')
+                                ->maxItems(3)
+                                ->relationship('borrowingDetail')
+                                ->schema([
+                                    Select::make('book_id')
+                                        ->label('Buku')
+                                        ->relationship('book', 'title')
+                                        ->options(Book::where('stock', '>', 0)->pluck('title', 'id'))
+                                        ->searchable()
+                                        ->required(),
+                                    TextInput::make('quantity')
+                                        ->label('Jumlah')
+                                        ->numeric()
+                                        ->required()
+                                        ->default(1)
+                                        ->minValue(1)
+                                        ->maxValue(1)
+                                ]),
+                        ])
                 ]),
             ]);
     }
@@ -93,6 +143,12 @@ class BorrowingResource extends Resource
                 //
             ])
             ->actions([
+                //view untuk melihat detail peminjaman
+                Action::make('view')
+                    ->label('View')
+                    ->icon('heroicon-o-eye')
+                    ->url(fn($record) => static::getUrl('view', ['record' => $record]))
+                    ->color('info'),
                 Action::make('approve_borrow')->label('Setujui Peminjaman')->visible(fn($record) => $record->isWaiting())->action(function ($record) {
                     $record->update(['status' => 'borrowed']);
                     $record->save();
@@ -141,6 +197,7 @@ class BorrowingResource extends Resource
         return [
             'index' => Pages\ListBorrowings::route('/'),
             'create' => Pages\CreateBorrowing::route('/create'),
+            'view' => Pages\ViewBorrowing::route('/{record}'),
             'edit' => Pages\EditBorrowing::route('/{record}/edit'),
         ];
     }
