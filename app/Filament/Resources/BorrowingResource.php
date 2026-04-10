@@ -46,7 +46,6 @@ class BorrowingResource extends Resource
                             ->options(User::where('role', 'student')->pluck('name', 'id'))
                             ->searchable()
                             ->placeholder('Pilih peminjam')
-                            ->required()
                             ->live()
                             ->disabled(fn($get) => filled($get('visitor_id')))
                             ->helperText('Pilih peminjam dari daftar pengguna yang terdaftar'),
