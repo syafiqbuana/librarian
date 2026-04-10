@@ -75,6 +75,11 @@ class User extends Authenticatable implements FilamentUser
         return $this->role === 'student';
     }
 
+    public function borrowings()
+    {
+        return $this->hasMany(Borrowing::class);
+    }
+
     public function studentDetail()
     {
         return $this->hasOne(StudentDetail::class);

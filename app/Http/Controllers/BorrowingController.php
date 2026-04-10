@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use App\Models\{Borrowing, BorrowingDetail, Book};
 use Illuminate\Support\Facades\DB;
@@ -29,6 +30,9 @@ class BorrowingController extends Controller
 
                 $borrowing = Borrowing::create([
                     'user_id' => auth()->id(),
+                    'borrow_date' => Carbon::now(),
+                    'due_date' => Carbon::now()->addDays(14),
+                    'status' => 'waiting',
                 ]);
 
                 foreach ($cart as $bookId => $item) {
@@ -46,10 +50,10 @@ class BorrowingController extends Controller
                         'borrowing_id' => $borrowing->id,
                         'book_id' => $book->id,
                         'quantity' => $qty,
+                        
                     ]);
 
                     // kurangi stok
-                    $book->decrement('stock', $qty);
                 }
             });
 

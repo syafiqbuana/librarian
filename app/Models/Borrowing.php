@@ -14,6 +14,8 @@ class Borrowing extends Model
         'due_date',
         'return_date',
         'status',
+        'lost_fine',
+        'damage_fine'
     ];
 
     protected $casts = [
@@ -22,16 +24,6 @@ class Borrowing extends Model
         'return_date' => 'datetime',
     ];
 
-    // protected static function booted()
-    // {
-    //     static::creating(function ($borrowing) {
-    //         $borrowing->name = auth()->user();
-    //         $borrowing->status = 'waiting';
-    //         $borrowing->borrow_date = Carbon::now();
-    //         $borrowing->due_date = Carbon::now()->addDays(14);
-    //     });
-    // }
-
     // kondisi aktif (real-time)
     public function isOverdue()
     {
@@ -39,19 +31,20 @@ class Borrowing extends Model
             && now()->gt($this->due_date);
     }
 
-public function getFineAttribute() 
-{
-    $endDate = ($this->return_date ?? now())->startOfDay();
-    $dueDate = $this->due_date->startOfDay();
+    public function getFineAttribute()
+    {
+        $endDate = ($this->return_date ?? now())->startOfDay();
+        $dueDate = $this->due_date->startOfDay();
 
-    if ($endDate->lte($dueDate)) {
-        return 0;
+        $lateFine = 0;
+
+        if ($endDate->gt($dueDate)) {
+            $daysLate = $dueDate->diffInDays($endDate);
+            $lateFine = $daysLate * 5000;
+        }
+
+        return $lateFine + ($this->damage_fine ?? 0) + ($this->lost_fine ?? 0);
     }
-
-    $daysLate = $dueDate->diffInDays($endDate);
-
-    return $daysLate * 5000;
-}
 
     // kondisi historis
     public function isReturnedLate()

@@ -11,14 +11,42 @@ class DashboardController extends Controller
     {
         $latestBooks = Book::with('genres')->latest()->take(5)->get();
         $allBooks = Book::with('genres')->get();
-        
-        return view('dashboard', compact('latestBooks', 'allBooks'));
+
+        $user = auth()->user();
+
+        $activeBorrowings = $user->borrowings()
+            ->whereIn('status', ['borrowed', 'pending_return'])
+            ->count();
+
+        $returnedBorrowings = $user->borrowings()
+            ->whereIn('status', ['returned', 'returned_late'])
+            ->count();
+
+        $overdueBorrowings = $user->borrowings()
+            ->where('status', 'borrowed')
+            ->where('due_date', '<', now())
+            ->count();
+
+        $totalFine = $user->borrowings()
+            ->whereIn('status', ['returned_late', 'returned'])
+            ->get()
+            ->sum('fine');
+
+        return view('dashboard', compact(
+            'latestBooks',
+            'allBooks',
+            'activeBorrowings',
+            'returnedBorrowings',
+            'overdueBorrowings',
+            'totalFine'
+        ));
     }
 
-    public function detailBook(Book $book){
-        
+    public function detailBook(Book $book)
+    {
+
         $book->load('genres');
 
-        return view ('books.detail',compact('book'));
+        return view('books.detail', compact('book'));
     }
 }

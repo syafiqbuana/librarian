@@ -106,7 +106,14 @@ class BorrowingResource extends Resource
     {
         return $table
             ->columns([
-                TextColumn::make('user.name')->label('Peminjam')->searchable(),
+                TextColumn::make('peminjam')
+                    ->label('Peminjam')
+                    ->getStateUsing(function ($record) {
+                        return $record->user?->name
+                            ?? $record->visitor?->name
+                            ?? '-';
+                    })
+                    ->searchable(),
                 TextColumn::make('borrow_date')->date()->label('Tanggal Pinjam')->sortable(),
                 TextColumn::make('due_date')->date()->label('Tanggal Jatuh Tempo')->sortable(),
                 TextColumn::make('status')->label('Status')->badge()->color(
@@ -136,46 +143,20 @@ class BorrowingResource extends Resource
                 TextColumn::make('fine')
                     ->label('Denda')
                     ->money('idr')
-                    ->color(fn($state) => $state === null ? 'danger' : 'success')
+                    ->color('danger')
             ])
+            
             ->filters([
                 //
             ])
             ->actions([
                 //view untuk melihat detail peminjaman
                 Action::make('view')
-                    ->label('View')
+                    ->label('Tinjau')
                     ->icon('heroicon-o-eye')
                     ->url(fn($record) => static::getUrl('view', ['record' => $record]))
                     ->color('info'),
-                Action::make('approve_borrow')->label('Setujui Peminjaman')->visible(fn($record) => $record->isWaiting())->action(function ($record) {
-                    $record->update(['status' => 'borrowed']);
-                    $record->save();
-                })->color('success'),
-                Action::make('confirm_return')
-                    ->label('Konfirmasi Pengembalian')
-                    ->color('success')
-                    ->requiresConfirmation()
-                    ->visible(fn($record) => $record->isPendingReturn())
-                    ->action(function ($record) {
-
-                        DB::transaction(function () use ($record) {
-                            $record->update([
-                                'return_date' => now(),
-                                'status' => $record->isOverdue() ? 'returned_late' : 'returned'
-                            ]);
-
-                            foreach ($record->borrowingDetail as $detail) {
-                                $detail->book->increment('stock', $detail->quantity);
-                            }
-
-                            Notification::make()
-                                ->title('Pengembalian Dikonfirmasi')
-                                ->success()
-                                ->color('info')
-                                ->send();
-                        });
-                    })
+                
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
